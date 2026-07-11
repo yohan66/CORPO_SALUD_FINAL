@@ -1,7 +1,6 @@
-# Sistema de Bienes Nacionales - UNET
+# Sistema de Bienes Nacionales CORPO_SALUD
 
-Sistema web para gestión de bienes nacionales de la Universidad Nacional Experimental del Táchira.
-
+Sistema web de gestión de bienes nacionales para la  Corporación de Salud del Estado Táchira.
 ## Características
 
 - **Consultar Bienes**: Búsqueda y filtrado por código, nombre, categoría y estado
@@ -33,7 +32,7 @@ O usar el script:
 ## Estructura
 
 ```
-bienes_unet/
+bienes CORPO_SALUD/
 ├── app.py           # Servidor HTTP con API REST
 ├── bienes_unet.db   # Base de datos SQLite
 ├── run.sh           # Script de ejecución
