@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Bienes Nacionales - CORPO-SALUD</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <h1>🏛️ Sistema de Bienes Nacionales</h1>
+                <p class="subtitle">CORPORACION DE SALUD DEL ESTADO TACHIRA</p>
+            </div>
+            <div class="user-info">
+                <span id="usuario-nombre">{{ session.nombre }}</span>
+                <span class="rol-badge">{{ session.rol }}</span>
+                <a href="/logout" class="btn-logout">Cerrar Sesión</a>
+            </div>
+        </div>
+    </header>
+
+    <nav class="tabs-nav">
+        <button class="tab-btn active" data-tab="consultar">📋 Consultar Bienes</button>
+        <button class="tab-btn" data-tab="agregar">➕ Agregar Bien</button>
+        <button class="tab-btn" data-tab="modificar">✏️ Modificar Bien</button>
+        <button class="tab-btn" data-tab="eliminar">🗑️ Eliminar Bien</button>
+        <button class="tab-btn" data-tab="reporte">📊 Reporte Mensual</button>
+    </nav>
+
+    <main class="container">
+        <!-- Pestaña Consultar -->
+        <section id="consultar" class="tab-content active">
+            <h2>Consultar Bienes</h2>
+            <div class="filters-bar">
+                <input type="text" id="search-input" placeholder="Buscar por código, nombre, descripción...">
+                <select id="filter-categoria">
+                    <option value="">Todas las categorías</option>
+                </select>
+                <select id="filter-estado">
+                    <option value="">Todos los estados</option>
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                    <option value="En Reparación">En Reparación</option>
+                    <option value="Dado de Baja">Dado de Baja</option>
+                </select>
+                <button class="btn-primary" onclick="buscarBienes()">🔍 Buscar</button>
+                <button class="btn-secondary" onclick="exportarCSV()">📥 Exportar CSV</button>
+            </div>
+            <div class="table-container">
+                <table id="tabla-bienes">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Estado</th>
+                            <th>Ubicación</th>
+                            <th>Fecha Ingreso</th>
+                            <th>Costo</th>
+                            <th>Responsable</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-body">
+                        <tr><td colspan="9" class="text-center">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination" id="pagination"></div>
+        </section>
+
+        <!-- Pestaña Agregar -->
+        <section id="agregar" class="tab-content">
+            <h2>Agregar Nuevo Bien</h2>
+            <form id="form-agregar" class="form-grid">
+                <div class="form-group">
+                    <label for="codigo">Código *</label>
+                    <input type="text" id="codigo" name="codigo" required>
+                </div>
+                <div class="form-group">
+                    <label for="nombre">Nombre del Bien *</label>
+                    <input type="text" id="nombre" name="nombre" required>
+                </div>
+                <div class="form-group full-width">
+                    <label for="descripcion">Descripción</label>
+                    <textarea id="descripcion" name="descripcion" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="categoria">Categoría</label>
+                    <input type="text" id="categoria" name="categoria" list="categorias-list">
+                    <datalist id="categorias-list"></datalist>
+                </div>
+                <div class="form-group">
+                    <label for="fecha_ingreso">Fecha de Ingreso *</label>
+                    <input type="date" id="fecha_ingreso" name="fecha_ingreso" required>
+                </div>
+                <div class="form-group">
+                    <label for="costo">Costo (Bs.)</label>
+                    <input type="number" id="costo" name="costo" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="estado">Estado</label>
+                    <select id="estado" name="estado">
+                        <option value="Activo">Activo</option>
+                        <option value="Inactivo">Inactivo</option>
+                        <option value="En Reparación">En Reparación</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ubicacion">Ubicación</label>
+                    <input type="text" id="ubicacion" name="ubicacion">
+                </div>
+                <div class="form-group">
+                    <label for="responsable">Responsable</label>
+                    <input type="text" id="responsable" name="responsable">
+                </div>
+                <div class="form-group full-width">
+                    <label for="observaciones">Observaciones</label>
+                    <textarea id="observaciones" name="observaciones" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-success">✅ Guardar Bien</button>
+                    <button type="reset" class="btn-secondary">🔄 Limpiar</button>
+                </div>
+            </form>
+            <div id="form-message" class="message"></div>
+        </section>
+
+        <!-- Pestaña Modificar -->
+        <section id="modificar" class="tab-content">
+            <h2>Modificar Bien</h2>
+            <div class="search-bien">
+                <input type="text" id="buscar-modificar" placeholder="Ingrese el código del bien a modificar">
+                <button class="btn-primary" onclick="buscarBienModificar()">🔍 Buscar</button>
+            </div>
+            <form id="form-modificar" class="form-grid" style="display:none;">
+                <input type="hidden" id="modificar-id">
+                <div class="form-group">
+                    <label for="mod-codigo">Código *</label>
+                    <input type="text" id="mod-codigo" name="codigo" required>
+                </div>
+                <div class="form-group">
+                    <label for="mod-nombre">Nombre del Bien *</label>
+                    <input type="text" id="mod-nombre" name="nombre" required>
+                </div>
+                <div class="form-group full-width">
+                    <label for="mod-descripcion">Descripción</label>
+                    <textarea id="mod-descripcion" name="descripcion" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="mod-categoria">Categoría</label>
+                    <input type="text" id="mod-categoria" name="categoria" list="mod-categorias-list">
+                    <datalist id="mod-categorias-list"></datalist>
+                </div>
+                <div class="form-group">
+                    <label for="mod-fecha_ingreso">Fecha de Ingreso *</label>
+                    <input type="date" id="mod-fecha_ingreso" name="fecha_ingreso" required>
+                </div>
+                <div class="form-group">
+                    <label for="mod-costo">Costo (Bs.)</label>
+                    <input type="number" id="mod-costo" name="costo" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="mod-estado">Estado</label>
+                    <select id="mod-estado" name="estado">
+                        <option value="Activo">Activo</option>
+                        <option value="Inactivo">Inactivo</option>
+                        <option value="En Reparación">En Reparación</option>
+                        <option value="Dado de Baja">Dado de Baja</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="mod-ubicacion">Ubicación</label>
+                    <input type="text" id="mod-ubicacion" name="ubicacion">
+                </div>
+                <div class="form-group">
+                    <label for="mod-responsable">Responsable</label>
+                    <input type="text" id="mod-responsable" name="responsable">
+                </div>
+                <div class="form-group full-width">
+                    <label for="mod-observaciones">Observaciones</label>
+                    <textarea id="mod-observaciones" name="observaciones" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-success">💾 Guardar Cambios</button>
+                    <button type="button" class="btn-secondary" onclick="cancelarModificar()">❌ Cancelar</button>
+                </div>
+            </form>
+            <div id="modificar-message" class="message"></div>
+        </section>
+
+        <!-- Pestaña Eliminar -->
+        <section id="eliminar" class="tab-content">
+            <h2>Eliminar Bien</h2>
+            <div class="search-bien">
+                <input type="text" id="buscar-eliminar" placeholder="Ingrese el código del bien a eliminar">
+                <button class="btn-primary" onclick="buscarBienEliminar()">🔍 Buscar</button>
+            </div>
+            <div id="bien-eliminar-info" class="bien-info-card" style="display:none;">
+                <h3>Información del Bien</h3>
+                <div class="info-grid">
+                    <div class="info-item"><strong>Código:</strong> <span id="del-codigo"></span></div>
+                    <div class="info-item"><strong>Nombre:</strong> <span id="del-nombre"></span></div>
+                    <div class="info-item"><strong>Categoría:</strong> <span id="del-categoria"></span></div>
+                    <div class="info-item"><strong>Estado:</strong> <span id="del-estado"></span></div>
+                    <div class="info-item"><strong>Ubicación:</strong> <span id="del-ubicacion"></span></div>
+                    <div class="info-item"><strong>Fecha Ingreso:</strong> <span id="del-fecha"></span></div>
+                    <div class="info-item"><strong>Costo:</strong> <span id="del-costo"></span></div>
+                    <div class="info-item"><strong>Responsable:</strong> <span id="del-responsable"></span></div>
+                </div>
+                <div class="warning-box">
+                    ⚠️ <strong>Advertencia:</strong> Esta acción eliminará permanentemente el bien del sistema. Esta operación no se puede deshacer.
+                </div>
+                <div class="form-actions">
+                    <button class="btn-danger" onclick="confirmarEliminar()">🗑️ Eliminar Permanentemente</button>
+                    <button class="btn-secondary" onclick="cancelarEliminar()">❌ Cancelar</button>
+                </div>
+                <input type="hidden" id="eliminar-id">
+            </div>
+            <div id="eliminar-message" class="message"></div>
+        </section>
+
+        <!-- Pestaña Reporte Mensual -->
+        <section id="reporte" class="tab-content">
+            <h2>Reporte Mensual de Bienes</h2>
+            <div class="reporte-filters">
+                <div class="form-group">
+                    <label for="reporte-mes">Mes</label>
+                    <select id="reporte-mes">
+                        <option value="1">Enero</option>
+                        <option value="2">Febrero</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Mayo</option>
+                        <option value="6">Junio</option>
+                        <option value="7">Julio</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12" selected>Diciembre</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="reporte-anio">Año</label>
+                    <input type="number" id="reporte-anio" value="2026" min="2000" max="2030">
+                </div>
+                <button class="btn-primary" onclick="generarReporte()">📊 Generar Reporte</button>
+                <button class="btn-secondary" onclick="exportarReporte()">📥 Exportar CSV</button>
+            </div>
+            <div id="reporte-content" style="display:none;">
+                <div class="resumen-cards">
+                    <div class="card">
+                        <h3>Total Bienes</h3>
+                        <p class="big-number" id="rep-total">0</p>
+                    </div>
+                    <div class="card">
+                        <h3>Bienes Nuevos</h3>
+                        <p class="big-number green" id="rep-nuevos">0</p>
+                    </div>
+                    <div class="card">
+                        <h3>Dados de Baja</h3>
+                        <p class="big-number red" id="rep-bajas">0</p>
+                    </div>
+                    <div class="card">
+                        <h3>Activos</h3>
+                        <p class="big-number blue" id="rep-activos">0</p>
+                    </div>
+                </div>
+                
+                <div class="reporte-section">
+                    <h3>Bienes por Categoría</h3>
+                    <table class="tabla-reporte">
+                        <thead><tr><th>Categoría</th><th>Cantidad</th></tr></thead>
+                        <tbody id="tabla-categorias"></tbody>
+                    </table>
+                </div>
+                
+                <div class="reporte-section">
+                    <h3>Bienes Registrados en el Mes</h3>
+                    <table class="tabla-reporte">
+                        <thead>
+                            <tr><th>Código</th><th>Nombre</th><th>Categoría</th><th>Fecha</th><th>Costo</th></tr>
+                        </thead>
+                        <tbody id="tabla-bienes-mes"></tbody>
+                    </table>
+                </div>
+                
+                <div class="reporte-section">
+                    <h3>Movimientos del Mes</h3>
+                    <table class="tabla-reporte">
+                        <thead>
+                            <tr><th>Fecha</th><th>Tipo</th><th>Código Bien</th><th>Nombre</th><th>Usuario</th><th>Descripción</th></tr>
+                        </thead>
+                        <tbody id="tabla-movimientos"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const perPage = 50;
+        let editingId = null;
+        let deletingId = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarCategorias();
+            buscarBienes();
+            document.getElementById('fecha_ingreso').valueAsDate = new Date();
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tab = this.dataset.tab;
+                    switchTab(tab);
+                });
+            });
+            
+            document.getElementById('form-agregar').addEventListener('submit', agregarBien);
+            document.getElementById('form-modificar').addEventListener('submit', modificarBien);
+        });
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+            
+            if (tabName === 'consultar') buscarBienes();
+            if (tabName === 'reporte') document.getElementById('reporte-anio').value = new Date().getFullYear();
+        }
+
+        async function cargarCategorias() {
+            const res = await fetch('/api/bienes/categorias');
+            const categorias = await res.json();
+            const datalist = document.getElementById('categorias-list');
+            const modDatalist = document.getElementById('mod-categorias-list');
+            const filterSelect = document.getElementById('filter-categoria');
+            
+            datalist.innerHTML = categorias.map(c => `<option value="${c}">`).join('');
+            modDatalist.innerHTML = categorias.map(c => `<option value="${c}">`).join('');
+            
+            filterSelect.innerHTML = '<option value="">Todas las categorías</option>' + 
+                categorias.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+
+        async function buscarBienes() {
+            const search = document.getElementById('search-input').value;
+            const estado = document.getElementById('filter-estado').value;
+            const categoria = document.getElementById('filter-categoria').value;
+            
+            const params = new URLSearchParams({ page: currentPage, per_page: perPage, search, estado, categoria });
+            const res = await fetch(`/api/bienes?${params}`);
+            const data = await res.json();
+            
+            const tbody = document.getElementById('tabla-body');
+            if (data.bienes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center">No se encontraron bienes</td></tr>';
+            } else {
+                tbody.innerHTML = data.bienes.map(b => `
+                    <tr>
+                        <td>${b.codigo}</td>
+                        <td>${b.nombre}</td>
+                        <td>${b.categoria || '-'}</td>
+                        <td><span class="estado-badge estado-${b.estado.toLowerCase().replace(/\\s+/g, '-')}">${b.estado}</span></td>
+                        <td>${b.ubicacion || '-'}</td>
+                        <td>${b.fecha_ingreso}</td>
+                        <td>${b.costo ? '$' + parseFloat(b.costo).toFixed(2) : '-'}</td>
+                        <td>${b.responsable || '-'}</td>
+                        <td>
+                            <button class="btn-small btn-edit" onclick="editarBien(${b.id})">✏️</button>
+                            <button class="btn-small btn-delete" onclick="prepararEliminar(${b.id})">🗑️</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+            
+            renderPagination(data.total, data.page, data.per_page);
+        }
+
+        function renderPagination(total, page, perPage) {
+            const totalPages = Math.ceil(total / perPage);
+            const pagination = document.getElementById('pagination');
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            let html = `<button ${page === 1 ? 'disabled' : ''} onclick="changePage(${page - 1})">Anterior</button>`;
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === page) {
+                    html += `<span class="current-page">${i}</span>`;
+                } else {
+                    html += `<button onclick="changePage(${i})">${i}</button>`;
+                }
+            }
+            html += `<button ${page === totalPages ? 'disabled' : ''} onclick="changePage(${page + 1})">Siguiente</button>`;
+            pagination.innerHTML = html;
+        }
+
+        function changePage(page) {
+            currentPage = page;
+            buscarBienes();
+        }
+
+        async function agregarBien(e) {
+            e.preventDefault();
+            const form = e.target;
+            const data = {
+                codigo: form.codigo.value,
+                nombre: form.nombre.value,
+                descripcion: form.descripcion.value,
+                categoria: form.categoria.value,
+                fecha_ingreso: form.fecha_ingreso.value,
+                costo: form.costo.value || 0,
+                estado: form.estado.value,
+                ubicacion: form.ubicacion.value,
+                responsable: form.responsable.value,
+                observaciones: form.observaciones.value
+            };
+            
+            const res = await fetch('/api/bienes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            const msg = document.getElementById('form-message');
+            
+            if (result.success) {
+                msg.className = 'message success';
+                msg.textContent = result.message;
+                form.reset();
+                document.getElementById('fecha_ingreso').valueAsDate = new Date();
+                cargarCategorias();
+            } else {
+                msg.className = 'message error';
+                msg.textContent = result.error;
+            }
+        }
+
+        async function buscarBienModificar() {
+            const codigo = document.getElementById('buscar-modificar').value.trim();
+            if (!codigo) {
+                showMessage('modificar-message', 'Ingrese un código', 'error');
+                return;
+            }
+            
+            const res = await fetch(`/api/bienes?search=${encodeURIComponent(codigo)}&per_page=1`);
+            const data = await res.json();
+            
+            if (data.bienes.length === 0) {
+                showMessage('modificar-message', 'Bien no encontrado', 'error');
+                document.getElementById('form-modificar').style.display = 'none';
+                return;
+            }
+            
+            const bien = data.bienes[0];
+            cargarFormularioModificar(bien);
+        }
+
+        function cargarFormularioModificar(bien) {
+            editingId = bien.id;
+            document.getElementById('modificar-id').value = bien.id;
+            document.getElementById('mod-codigo').value = bien.codigo;
+            document.getElementById('mod-nombre').value = bien.nombre;
+            document.getElementById('mod-descripcion').value = bien.descripcion || '';
+            document.getElementById('mod-categoria').value = bien.categoria || '';
+            document.getElementById('mod-fecha_ingreso').value = bien.fecha_ingreso;
+            document.getElementById('mod-costo').value = bien.costo || '';
+            document.getElementById('mod-estado').value = bien.estado;
+            document.getElementById('mod-ubicacion').value = bien.ubicacion || '';
+            document.getElementById('mod-responsable').value = bien.responsable || '';
+            document.getElementById('mod-observaciones').value = bien.observaciones || '';
+            
+            document.getElementById('form-modificar').style.display = 'grid';
+            document.getElementById('modificar-message').textContent = '';
+        }
+
+        async function modificarBien(e) {
+            e.preventDefault();
+            const id = document.getElementById('modificar-id').value;
+            const data = {
+                codigo: document.getElementById('mod-codigo').value,
+                nombre: document.getElementById('mod-nombre').value,
+                descripcion: document.getElementById('mod-descripcion').value,
+                categoria: document.getElementById('mod-categoria').value,
+                fecha_ingreso: document.getElementById('mod-fecha_ingreso').value,
+                costo: document.getElementById('mod-costo').value || 0,
+                estado: document.getElementById('mod-estado').value,
+                ubicacion: document.getElementById('mod-ubicacion').value,
+                responsable: document.getElementById('mod-responsable').value,
+                observaciones: document.getElementById('mod-observaciones').value
+            };
+            
+            const res = await fetch(`/api/bienes/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            showMessage('modificar-message', result.message || result.error, result.success ? 'success' : 'error');
+            
+            if (result.success) {
+                document.getElementById('form-modificar').style.display = 'none';
+                document.getElementById('buscar-modificar').value = '';
+                cargarCategorias();
+            }
+        }
+
+        function cancelarModificar() {
+            document.getElementById('form-modificar').style.display = 'none';
+            document.getElementById('buscar-modificar').value = '';
+            document.getElementById('modificar-message').textContent = '';
+        }
+
+        async function buscarBienEliminar() {
+            const codigo = document.getElementById('buscar-eliminar').value.trim();
+            if (!codigo) {
+                showMessage('eliminar-message', 'Ingrese un código', 'error');
+                return;
+            }
+            
+            const res = await fetch(`/api/bienes?search=${encodeURIComponent(codigo)}&per_page=1`);
+            const data = await res.json();
+            
+            if (data.bienes.length === 0) {
+                showMessage('eliminar-message', 'Bien no encontrado', 'error');
+                document.getElementById('bien-eliminar-info').style.display = 'none';
+                return;
+            }
+            
+            const bien = data.bienes[0];
+            mostrarBienEliminar(bien);
+        }
+
+        function mostrarBienEliminar(bien) {
+            deletingId = bien.id;
+            document.getElementById('eliminar-id').value = bien.id;
+            document.getElementById('del-codigo').textContent = bien.codigo;
+            document.getElementById('del-nombre').textContent = bien.nombre;
+            document.getElementById('del-categoria').textContent = bien.categoria || '-';
+            document.getElementById('del-estado').textContent = bien.estado;
+            document.getElementById('del-ubicacion').textContent = bien.ubicacion || '-';
+            document.getElementById('del-fecha').textContent = bien.fecha_ingreso;
+            document.getElementById('del-costo').textContent = bien.costo ? '$' + parseFloat(bien.costo).toFixed(2) : '-';
+            document.getElementById('del-responsable').textContent = bien.responsable || '-';
+            document.getElementById('bien-eliminar-info').style.display = 'block';
+            document.getElementById('eliminar-message').textContent = '';
+        }
+
+        async function confirmarEliminar() {
+            const id = document.getElementById('eliminar-id').value;
+            if (!confirm('¿Está seguro de eliminar este bien? Esta acción no se puede deshacer.')) return;
+            
+            const res = await fetch(`/api/bienes/${id}`, { method: 'DELETE' });
+            const result = await res.json();
+            showMessage('eliminar-message', result.message, result.success ? 'success' : 'error');
+            
+            if (result.success) {
+                document.getElementById('bien-eliminar-info').style.display = 'none';
+                document.getElementById('buscar-eliminar').value = '';
+                cargarCategorias();
+            }
+        }
+
+        function cancelarEliminar() {
+            document.getElementById('bien-eliminar-info').style.display = 'none';
+            document.getElementById('buscar-eliminar').value = '';
+            document.getElementById('eliminar-message').textContent = '';
+        }
+
+        function editarBien(id) {
+            fetch(`/api/bienes/${id}`)
+                .then(res => res.json())
+                .then(bien => {
+                    switchTab('modificar');
+                    cargarFormularioModificar(bien);
+                });
+        }
+
+        function prepararEliminar(id) {
+            fetch(`/api/bienes/${id}`)
+                .then(res => res.json())
+                .then(bien => {
+                    switchTab('eliminar');
+                    document.getElementById('buscar-eliminar').value = bien.codigo;
+                    mostrarBienEliminar(bien);
+                });
+        }
+
+        async function generarReporte() {
+            const mes = document.getElementById('reporte-mes').value;
+            const anio = document.getElementById('reporte-anio').value;
+            const res = await fetch(`/api/reporte-mensual?mes=${mes}&anio=${anio}`);
+            const data = await res.json();
+            
+            document.getElementById('rep-total').textContent = data.total_bienes;
+            document.getElementById('rep-nuevos').textContent = data.bienes_nuevos;
+            document.getElementById('rep-bajas').textContent = data.bienes_dados_baja;
+            document.getElementById('rep-activos').textContent = data.bienes_activos;
+            
+            document.getElementById('tabla-categorias').innerHTML = data.por_categoria.map(c => 
+                `<tr><td>${c.categoria}</td><td>${c.cantidad}</td></tr>`
+            ).join('');
+            
+            document.getElementById('tabla-bienes-mes').innerHTML = data.bienes_mes.map(b => `
+                <tr><td>${b.codigo}</td><td>${b.nombre}</td><td>${b.categoria || '-'}</td><td>${b.fecha_ingreso}</td><td>${b.costo ? '$' + parseFloat(b.costo).toFixed(2) : '-'}</td></tr>
+            `).join('');
+            
+            document.getElementById('tabla-movimientos').innerHTML = data.movimientos_mes.map(m => 
+                `<tr><td>${m.fecha}</td><td>${m.tipo_movimiento}</td><td>${m.codigo}</td><td>${m.nombre}</td><td>${m.usuario}</td><td>${m.descripcion}</td></tr>`
+            ).join('');
+            
+            document.getElementById('reporte-content').style.display = 'block';
+        }
+
+        function exportarReporte() {
+            const mes = document.getElementById('reporte-mes').value;
+            const anio = document.getElementById('reporte-anio').value;
+            window.open(`/api/reporte-mensual.csv?mes=${mes}&anio=${anio}`, '_blank');
+        }
+
+        function exportarCSV() {
+            const search = document.getElementById('search-input').value;
+            const estado = document.getElementById('filter-estado').value;
+            const categoria = document.getElementById('filter-categoria').value;
+            window.open(`/api/bienes.csv?search=${encodeURIComponent(search)}&estado=${estado}&categoria=${categoria}`, '_blank');
+        }
+
+        function showMessage(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.className = `message ${type}`;
+            el.textContent = message;
+            setTimeout(() => el.textContent = '', 5000);
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
