@@ -13,7 +13,7 @@ Sistema web de gestión de bienes nacionales para la  Corporación de Salud del 
 
 ```bash
 # Clonar o copiar el proyecto
-cd bienes_unet
+cd CORPO_SALUD
 
 # Ejecutar el servidor
 python3 app.py
