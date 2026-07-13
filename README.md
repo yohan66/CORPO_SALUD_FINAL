@@ -34,7 +34,7 @@ O usar el script:
 ```
 bienes CORPO_SALUD/
 ├── app.py           # Servidor HTTP con API REST
-├── bienes_unet.db   # Base de datos SQLite
+├── CORPO_SALUD.db   # Base de datos SQLite
 ├── run.sh           # Script de ejecución
 ├── templates/
 │   ├── index.html   # Página principal
